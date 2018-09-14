@@ -37,12 +37,12 @@ from rqt_top.node_info import NodeInfo
 import re
 from threading import RLock
 import textwrap
-
+import rospy
 
 class TopWidgetItem(QTreeWidgetItem):
     def __init__(self, parent=None):
         super(TopWidgetItem, self).__init__(parent)
-        
+
     def __lt__(self, other):
         col = self.treeWidget().sortColumn()
         dtype = Top.SORT_TYPE[col]
@@ -149,6 +149,16 @@ class Top(Plugin):
     def _kill_node(self):
         self._node_info.kill_node(self._selected_node)
 
+    def save_one_item(self, row, info, time):
+        f = open("/home/mayankm/ais_valada/log_ws" + str(info['node_name']) + ".txt", "a")
+        f.write(str(time))
+        for col, field in enumerate(self.OUT_FIELDS):
+            if field == 'node_name':
+                continue
+            val = info[field]
+            f.write("\t" + str(val))
+        f.write("\n")
+
     def update_one_item(self, row, info):
         twi = TopWidgetItem()
         for col, field in enumerate(self.OUT_FIELDS):
@@ -168,13 +178,15 @@ class Top(Plugin):
     def update_table(self):
         self._table_widget.clear()
         infos = self._node_info.get_all_node_fields(self.NODE_FIELDS)
+        time = rospy.get_time()
         for nx, info in enumerate(infos):
             self.update_one_item(nx, info)
+            self.save_one_item(nx, info, time)
 
     def shutdown_plugin(self):
         self._update_timer.stop()
 
-    def save_settings(self, plugin_settings, instance_settings):        
+    def save_settings(self, plugin_settings, instance_settings):
         instance_settings.set_value('filter_text', self._filter_box.text())
         instance_settings.set_value('is_regex', int(self._regex_box.checkState()))
 
